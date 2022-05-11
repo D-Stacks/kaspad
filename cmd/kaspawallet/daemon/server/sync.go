@@ -47,6 +47,10 @@ func (s *server) onUTXOsChanged(notification *appmessage.UTXOsChangedNotificatio
 	fmt.Println(notification.ReceivedAt())
 	fmt.Println("removing", len(notification.Removed))
 	for _, removedUTXOByAddressesEntry := range notification.Removed {
+		_, ok := s.addressSet[removedUTXOByAddressesEntry.Address]
+		if !ok {
+			continue
+		}
 		removedDomainOutpoint, err := appmessage.RPCOutpointToDomainOutpoint(removedUTXOByAddressesEntry.Outpoint)
 		if err != nil {
 			log.Warn(err)
@@ -55,13 +59,13 @@ func (s *server) onUTXOsChanged(notification *appmessage.UTXOsChangedNotificatio
 	}
 	fmt.Println("adding", len(notification.Added))
 	for _, addedUTXOByAddressesEntry := range notification.Added {
+		address, ok := s.addressSet[addedUTXOByAddressesEntry.Address]
+		if !ok {
+			continue
+		}
 		newDomainOutpoint, err := appmessage.RPCOutpointToDomainOutpoint(addedUTXOByAddressesEntry.Outpoint)
 		if err != nil {
 			log.Warn(err)
-		}
-		address, ok := s.addressSet[addedUTXOByAddressesEntry.Address]
-		if !ok {
-			log.Warn(errors.Errorf("Got result from address %s even though it wasn't requested", addedUTXOByAddressesEntry.Address))
 		}
 		utxo, err := appmessage.RPCUTXOEntryToUTXOEntry(addedUTXOByAddressesEntry.UTXOEntry)
 		if err != nil {
@@ -81,7 +85,7 @@ func (s *server) sync() error {
 		return err
 	}
 
-	err = s.rpcClient.RegisterForUTXOsChangedNotifications(s.addressSet.strings(), s.onUTXOsChanged)
+	err = s.rpcClient.RegisterForUTXOsChangedNotifications(nil, s.onUTXOsChanged)
 	if err != nil {
 		return err
 	}
@@ -91,15 +95,11 @@ func (s *server) sync() error {
 
 	for i := range ticker.C {
 		fmt.Println(i)
-		err = s.collectFarAddresses()
-		if err != nil {
-			return err
-		}
-
 		err = s.collectRecentAddresses()
 		if err != nil {
 			return err
 		}
+		fmt.Println(len(s.addressSet))
 	}
 
 	return nil
