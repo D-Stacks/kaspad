@@ -254,7 +254,7 @@ func (s *server) moreUTXOsForMergeTransaction(alreadySelectedUTXOs []*libkaspawa
 		alreadySelectedUTXOsMap[*alreadySelectedUTXO.Outpoint] = struct{}{}
 	}
 
-	for _, utxo := range s.utxosSortedByAmount {
+	for _, utxo := range s.utxosSortedByAmount() {
 		if _, ok := alreadySelectedUTXOsMap[*utxo.Outpoint]; ok {
 			continue
 		}

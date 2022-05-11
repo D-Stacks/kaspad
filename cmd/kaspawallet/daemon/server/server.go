@@ -28,13 +28,13 @@ type server struct {
 	rpcClient *rpcclient.RPCClient
 	params    *dagconfig.Params
 
-	lock                sync.RWMutex
-	utxosSortedByAmount []*walletUTXO
-	nextSyncStartIndex  uint32
-	keysFile            *keys.File
-	shutdown            chan struct{}
-	addressSet          walletAddressSet
-	txMassCalculator    *txmass.Calculator
+	lock               sync.RWMutex
+	utxoSet            walletUTXOSet
+	nextSyncStartIndex uint32
+	keysFile           *keys.File
+	shutdown           chan struct{}
+	addressSet         walletAddressSet
+	txMassCalculator   *txmass.Calculator
 }
 
 // Start starts the kaspawalletd server
@@ -65,14 +65,14 @@ func Start(params *dagconfig.Params, listen, rpcServer string, keysFilePath stri
 	}
 
 	serverInstance := &server{
-		rpcClient:           rpcClient,
-		params:              params,
-		utxosSortedByAmount: []*walletUTXO{},
-		nextSyncStartIndex:  0,
-		keysFile:            keysFile,
-		shutdown:            make(chan struct{}),
-		addressSet:          make(walletAddressSet),
-		txMassCalculator:    txmass.NewCalculator(params.MassPerTxByte, params.MassPerScriptPubKeyByte, params.MassPerSigOp),
+		rpcClient:          rpcClient,
+		params:             params,
+		utxoSet:            make(walletUTXOSet),
+		nextSyncStartIndex: 0,
+		keysFile:           keysFile,
+		shutdown:           make(chan struct{}),
+		addressSet:         make(walletAddressSet),
+		txMassCalculator:   txmass.NewCalculator(params.MassPerTxByte, params.MassPerScriptPubKeyByte, params.MassPerSigOp),
 	}
 
 	spawn("serverInstance.sync", func() {

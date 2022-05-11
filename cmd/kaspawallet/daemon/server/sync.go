@@ -1,7 +1,7 @@
 package server
 
 import (
-	"sort"
+	"fmt"
 	"time"
 
 	"github.com/kaspanet/kaspad/cmd/kaspawallet/libkaspawallet"
@@ -22,7 +22,65 @@ func (was walletAddressSet) strings() []string {
 	return addresses
 }
 
+func (s *server) initialize() error {
+	err := s.collectRecentAddresses()
+	if err != nil {
+		return err
+	}
+
+	err = s.collectFarAddresses()
+	if err != nil {
+		return err
+	}
+
+	err = s.getExistingUTXOsWithLock()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *server) onUTXOsChanged(notification *appmessage.UTXOsChangedNotificationMessage) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	fmt.Println("removing", len(notification.Removed))
+	for _, removedUTXOByAddressesEntry := range notification.Removed {
+		removedDomainOutpoint, err := appmessage.RPCOutpointToDomainOutpoint(removedUTXOByAddressesEntry.Outpoint)
+		if err != nil {
+			log.Warn(err)
+		}
+		delete(s.utxoSet, *removedDomainOutpoint)
+	}
+	fmt.Println("adding", len(notification.Added))
+	for _, addedUTXOByAddressesEntry := range notification.Added {
+		newDomainOutpoint, err := appmessage.RPCOutpointToDomainOutpoint(addedUTXOByAddressesEntry.Outpoint)
+		if err != nil {
+			log.Warn(err)
+		}
+		address, ok := s.addressSet[addedUTXOByAddressesEntry.Address]
+		if !ok {
+			log.Warn(errors.Errorf("Got result from address %s even though it wasn't requested", addedUTXOByAddressesEntry.Address))
+		}
+		utxo, err := appmessage.RPCUTXOEntryToUTXOEntry(addedUTXOByAddressesEntry.UTXOEntry)
+		if err != nil {
+			log.Warn(err)
+		}
+		s.utxoSet[*newDomainOutpoint] = &walletUTXO{
+			Outpoint:  newDomainOutpoint,
+			UTXOEntry: utxo,
+			address:   address,
+		}
+	}
+}
+
 func (s *server) sync() error {
+	s.initialize()
+
+	err := s.rpcClient.RegisterForUTXOsChangedNotifications(s.addressSet.strings(), s.onUTXOsChanged)
+	if err != nil {
+		return err
+	}
+
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
@@ -33,12 +91,6 @@ func (s *server) sync() error {
 		}
 
 		err = s.collectFarAddresses()
-		if err != nil {
-			return err
-		}
-
-		err = s.refreshExistingUTXOsWithLock()
-
 		if err != nil {
 			return err
 		}
@@ -181,18 +233,18 @@ func (s *server) updateAddressesAndLastUsedIndexes(requestedAddressSet walletAdd
 	return s.keysFile.SetLastUsedInternalIndex(lastUsedInternalIndex)
 }
 
-func (s *server) refreshExistingUTXOsWithLock() error {
+func (s *server) getExistingUTXOsWithLock() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	return s.refreshUTXOs()
+	return s.getUTXOs()
 }
 
-// updateUTXOSet clears the current UTXO set, and re-fills it with the given entries
-func (s *server) updateUTXOSet(entries []*appmessage.UTXOsByAddressesEntry) error {
-	utxos := make([]*walletUTXO, len(entries))
+// getUTXOSet clears the current UTXO set, and re-fills it with the given entries
+func (s *server) getUTXOSet(entries []*appmessage.UTXOsByAddressesEntry) error {
+	utxos := make(walletUTXOSet)
 
-	for i, entry := range entries {
+	for _, entry := range entries {
 		outpoint, err := appmessage.RPCOutpointToDomainOutpoint(entry.Outpoint)
 		if err != nil {
 			return err
@@ -207,27 +259,26 @@ func (s *server) updateUTXOSet(entries []*appmessage.UTXOsByAddressesEntry) erro
 		if !ok {
 			return errors.Errorf("Got result from address %s even though it wasn't requested", entry.Address)
 		}
-		utxos[i] = &walletUTXO{
+
+		utxos[*outpoint] = &walletUTXO{
 			Outpoint:  outpoint,
 			UTXOEntry: utxoEntry,
 			address:   address,
 		}
 	}
 
-	sort.Slice(utxos, func(i, j int) bool { return utxos[i].UTXOEntry.Amount() > utxos[j].UTXOEntry.Amount() })
-
-	s.utxosSortedByAmount = utxos
+	s.utxoSet = utxos
 
 	return nil
 }
 
-func (s *server) refreshUTXOs() error {
+func (s *server) getUTXOs() error {
 	getUTXOsByAddressesResponse, err := s.rpcClient.GetUTXOsByAddresses(s.addressSet.strings())
 	if err != nil {
 		return err
 	}
 
-	return s.updateUTXOSet(getUTXOsByAddressesResponse.Entries)
+	return s.getUTXOSet(getUTXOsByAddressesResponse.Entries)
 }
 
 func (s *server) isSynced() bool {
