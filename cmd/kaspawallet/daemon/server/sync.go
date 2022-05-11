@@ -37,12 +37,14 @@ func (s *server) initialize() error {
 	if err != nil {
 		return err
 	}
+	fmt.Println("initialized")
 	return nil
 }
 
 func (s *server) onUTXOsChanged(notification *appmessage.UTXOsChangedNotificationMessage) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	fmt.Println(notification.ReceivedAt())
 	fmt.Println("removing", len(notification.Removed))
 	for _, removedUTXOByAddressesEntry := range notification.Removed {
 		removedDomainOutpoint, err := appmessage.RPCOutpointToDomainOutpoint(removedUTXOByAddressesEntry.Outpoint)
@@ -74,9 +76,12 @@ func (s *server) onUTXOsChanged(notification *appmessage.UTXOsChangedNotificatio
 }
 
 func (s *server) sync() error {
-	s.initialize()
+	err := s.initialize()
+	if err != nil {
+		return err
+	}
 
-	err := s.rpcClient.RegisterForUTXOsChangedNotifications(s.addressSet.strings(), s.onUTXOsChanged)
+	err = s.rpcClient.RegisterForUTXOsChangedNotifications(s.addressSet.strings(), s.onUTXOsChanged)
 	if err != nil {
 		return err
 	}
@@ -84,13 +89,14 @@ func (s *server) sync() error {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		err := s.collectRecentAddresses()
+	for i := range ticker.C {
+		fmt.Println(i)
+		err = s.collectFarAddresses()
 		if err != nil {
 			return err
 		}
 
-		err = s.collectFarAddresses()
+		err = s.collectRecentAddresses()
 		if err != nil {
 			return err
 		}
@@ -99,7 +105,8 @@ func (s *server) sync() error {
 	return nil
 }
 
-const numIndexesToQuery = 100
+const numIndexesToQueryForFarAddresses = 100
+const numIndexesToQueryForRecentAddresses = 1000
 
 // addressesToQuery scans the addresses in the given range. Because
 // each cosigner in a multisig has its own unique path for generating
@@ -127,17 +134,17 @@ func (s *server) addressesToQuery(start, end uint32) (walletAddressSet, error) {
 	return addresses, nil
 }
 
-// collectFarAddresses collects numIndexesToQuery addresses
+// collectFarAddresses collects numIndexesToQueryForFarAddresses addresses
 // from the last point it stopped in the previous call.
 func (s *server) collectFarAddresses() error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	err := s.collectAddresses(s.nextSyncStartIndex, s.nextSyncStartIndex+numIndexesToQuery)
+	err := s.collectAddresses(s.nextSyncStartIndex, s.nextSyncStartIndex+numIndexesToQueryForFarAddresses)
 	if err != nil {
 		return err
 	}
 
-	s.nextSyncStartIndex += numIndexesToQuery
+	s.nextSyncStartIndex += numIndexesToQueryForFarAddresses
 	return nil
 }
 
@@ -154,17 +161,25 @@ func (s *server) maxUsedIndex() uint32 {
 }
 
 // collectRecentAddresses collects addresses from used addresses until
-// the address with the index of the last used address + 1000.
-// collectRecentAddresses scans addresses in batches of numIndexesToQuery,
+// the address with the index of the last used address + numIndexesToQueryForRecentAddresses.
+// collectRecentAddresses scans addresses in batches of numIndexesToQueryForRecentAddresses,
 // and releases the lock between scans.
 func (s *server) collectRecentAddresses() error {
-	maxUsedIndex := s.maxUsedIndex()
-	for i := uint32(0); i < maxUsedIndex+1000; i += numIndexesToQuery {
-		err := s.collectAddressesWithLock(i, i+numIndexesToQuery)
+	index := uint32(0)
+	maxUsedIndex := uint32(0)
+	for ; index < maxUsedIndex+numIndexesToQueryForRecentAddresses; index += numIndexesToQueryForRecentAddresses {
+		err := s.collectAddressesWithLock(index, index+numIndexesToQueryForRecentAddresses)
 		if err != nil {
 			return err
 		}
+		maxUsedIndex = s.maxUsedIndex()
 	}
+
+	s.lock.Lock()
+	if index > s.nextSyncStartIndex {
+		s.nextSyncStartIndex = index
+	}
+	s.lock.Unlock()
 
 	return nil
 }
