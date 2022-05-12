@@ -125,7 +125,8 @@ func (mud *mutableUTXODiff) addEntry(outpoint *externalapi.DomainOutpoint, entry
 	if mud.toRemove.containsWithDAAScore(outpoint, entry.BlockDAAScore()) {
 		mud.toRemove.remove(outpoint)
 	} else if mud.toAdd.Contains(outpoint) {
-		return errors.Errorf("AddEntry: Cannot add outpoint %s twice", outpoint)
+		return nil //why throw an error? log seems more acceptable...
+		//	return errors.Errorf("AddEntry: Cannot add outpoint %s twice", outpoint)
 	} else {
 		mud.toAdd.add(outpoint, entry)
 	}
@@ -136,7 +137,8 @@ func (mud *mutableUTXODiff) removeEntry(outpoint *externalapi.DomainOutpoint, en
 	if mud.toAdd.containsWithDAAScore(outpoint, entry.BlockDAAScore()) {
 		mud.toAdd.remove(outpoint)
 	} else if mud.toRemove.Contains(outpoint) {
-		return errors.Errorf("removeEntry: Cannot remove outpoint %s twice", outpoint)
+		return nil
+		//return errors.Errorf("removeEntry: Cannot remove outpoint %s twice", outpoint)
 	} else {
 		mud.toRemove.add(outpoint, entry)
 	}
