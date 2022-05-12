@@ -23,10 +23,12 @@ func (v *blockValidator) ValidateBodyInIsolation(stagingArea *model.StagingArea,
 		return err
 	}
 
-	err = v.checkNoPrefilledInputs(block)
-	if err != nil {
-		return err
-	}
+	//why is below a problem?
+
+	//err = v.checkNoPrefilledInputs(block)
+	//if err != nil {
+	//	return err
+	//}
 
 	err = v.checkBlockHashMerkleRoot(block)
 	if err != nil {
