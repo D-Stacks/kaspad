@@ -153,6 +153,10 @@ func (x *RpcTransactionInput) toAppMessage() (*appmessage.RPCTransactionInput, e
 	if err != nil {
 		return nil, err
 	}
+	utxoEntry, err := x.UtxoEntry.toAppMessage()
+	if err != nil {
+		return nil, err
+	}
 	var verboseData *appmessage.RPCTransactionInputVerboseData
 	for x.VerboseData != nil {
 		appMessageVerboseData, err := x.VerboseData.toAppMessage()
@@ -167,6 +171,7 @@ func (x *RpcTransactionInput) toAppMessage() (*appmessage.RPCTransactionInput, e
 		Sequence:         x.Sequence,
 		VerboseData:      verboseData,
 		SigOpCount:       byte(x.SigOpCount),
+		UTXOEntry:        utxoEntry,
 	}, nil
 }
 
@@ -178,12 +183,27 @@ func (x *RpcTransactionInput) fromAppMessage(message *appmessage.RPCTransactionI
 		verboseData := &RpcTransactionInputVerboseData{}
 		verboseData.fromAppData(message.VerboseData)
 	}
-	*x = RpcTransactionInput{
-		PreviousOutpoint: previousOutpoint,
-		SignatureScript:  message.SignatureScript,
-		Sequence:         message.Sequence,
-		VerboseData:      verboseData,
-		SigOpCount:       uint32(message.SigOpCount),
+
+	if message.UTXOEntry != nil {
+		utxoEntry := &RpcUtxoEntry{}
+		utxoEntry.fromAppMessage(message.UTXOEntry)
+
+		*x = RpcTransactionInput{
+			PreviousOutpoint: previousOutpoint,
+			SignatureScript:  message.SignatureScript,
+			Sequence:         message.Sequence,
+			VerboseData:      verboseData,
+			SigOpCount:       uint32(message.SigOpCount),
+			UtxoEntry:        utxoEntry,
+		}
+	} else {
+		*x = RpcTransactionInput{
+			PreviousOutpoint: previousOutpoint,
+			SignatureScript:  message.SignatureScript,
+			Sequence:         message.Sequence,
+			VerboseData:      verboseData,
+			SigOpCount:       uint32(message.SigOpCount),
+		}
 	}
 }
 

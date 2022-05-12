@@ -2,8 +2,9 @@ package appmessage
 
 import (
 	"encoding/hex"
-	"github.com/pkg/errors"
 	"math/big"
+
+	"github.com/pkg/errors"
 
 	"github.com/kaspanet/kaspad/domain/consensus/utils/blockheader"
 	"github.com/kaspanet/kaspad/domain/consensus/utils/hashes"
@@ -184,11 +185,34 @@ func RPCTransactionToDomainTransaction(rpcTransaction *RPCTransaction) (*externa
 		if err != nil {
 			return nil, err
 		}
-		inputs[i] = &externalapi.DomainTransactionInput{
-			PreviousOutpoint: *previousOutpoint,
-			SignatureScript:  signatureScript,
-			Sequence:         input.Sequence,
-			SigOpCount:       input.SigOpCount,
+
+		if input.UTXOEntry != nil {
+			script, err := hex.DecodeString(input.UTXOEntry.ScriptPublicKey.Script)
+			if err != nil {
+				return nil, err
+			}
+			inputs[i] = &externalapi.DomainTransactionInput{
+				PreviousOutpoint: *previousOutpoint,
+				SignatureScript:  signatureScript,
+				Sequence:         input.Sequence,
+				SigOpCount:       input.SigOpCount,
+				UTXOEntry: utxo.NewUTXOEntry(
+					input.UTXOEntry.Amount,
+					&externalapi.ScriptPublicKey{
+						Version: input.UTXOEntry.ScriptPublicKey.Version,
+						Script:  script,
+					},
+					input.UTXOEntry.IsCoinbase,
+					input.UTXOEntry.BlockDAAScore,
+				),
+			}
+		} else { //a valid transaction doesn't need utxo data
+			inputs[i] = &externalapi.DomainTransactionInput{
+				PreviousOutpoint: *previousOutpoint,
+				SignatureScript:  signatureScript,
+				Sequence:         input.Sequence,
+				SigOpCount:       input.SigOpCount,
+			}
 		}
 	}
 	outputs := make([]*externalapi.DomainTransactionOutput, len(rpcTransaction.Outputs))
@@ -263,11 +287,31 @@ func DomainTransactionToRPCTransaction(transaction *externalapi.DomainTransactio
 			Index:         input.PreviousOutpoint.Index,
 		}
 		signatureScript := hex.EncodeToString(input.SignatureScript)
-		inputs[i] = &RPCTransactionInput{
-			PreviousOutpoint: previousOutpoint,
-			SignatureScript:  signatureScript,
-			Sequence:         input.Sequence,
-			SigOpCount:       input.SigOpCount,
+
+		if input.UTXOEntry != nil {
+			utxoEntry := &RPCUTXOEntry{
+				Amount: input.UTXOEntry.Amount(),
+				ScriptPublicKey: &RPCScriptPublicKey{
+					Script:  hex.EncodeToString(input.UTXOEntry.ScriptPublicKey().Script),
+					Version: input.UTXOEntry.ScriptPublicKey().Version},
+				BlockDAAScore: input.UTXOEntry.BlockDAAScore(),
+				IsCoinbase:    input.UTXOEntry.IsCoinbase(),
+			}
+
+			inputs[i] = &RPCTransactionInput{
+				PreviousOutpoint: previousOutpoint,
+				SignatureScript:  signatureScript,
+				Sequence:         input.Sequence,
+				SigOpCount:       input.SigOpCount,
+				UTXOEntry:        utxoEntry,
+			}
+		} else { //a valid transaction doesn't need utxo data
+			inputs[i] = &RPCTransactionInput{
+				PreviousOutpoint: previousOutpoint,
+				SignatureScript:  signatureScript,
+				Sequence:         input.Sequence,
+				SigOpCount:       input.SigOpCount,
+			}
 		}
 	}
 	outputs := make([]*RPCTransactionOutput, len(transaction.Outputs))

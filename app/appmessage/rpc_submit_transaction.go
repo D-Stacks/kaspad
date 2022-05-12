@@ -63,6 +63,7 @@ type RPCTransactionInput struct {
 	Sequence         uint64
 	SigOpCount       byte
 	VerboseData      *RPCTransactionInputVerboseData
+	UTXOEntry        *RPCUTXOEntry
 }
 
 // RPCScriptPublicKey is a kaspad ScriptPublicKey representation
