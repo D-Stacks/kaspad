@@ -11,7 +11,7 @@ func (s *server) Send(_ context.Context, request *pb.SendRequest) (*pb.SendRespo
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	amount, err :=  strconv.ParseUint(request.Amount, 10, 64)
+	amount, err := strconv.ParseUint(request.Amount, 10, 64)
 	if err != nil {
 		return nil, err
 	}

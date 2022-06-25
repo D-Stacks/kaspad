@@ -16,6 +16,8 @@ service kaspawalletd {
   // Since SignRequest contains a password - this command should only be used on a trusted or secure connection
   rpc Sign(SignRequest) returns (SignResponse) {}
   rpc CheckIfAddressesAreValid (CheckIfAddressesAreValidRequest) returns (CheckIfAddressesAreValidResponse) {}
+  rpc CheckIfAddressIsValid (CheckIfAddressIsValidRequest) returns (CheckIfAddressIsValidResponse) {}
+
 }
 
 message GetBalanceRequest {
@@ -137,3 +139,13 @@ message CheckIfAddressesAreValidRequest{
 message CheckIfAddressesAreValidResponse {
         repeated IsValidAddress areValidAddresses = 1;
 }
+
+message CheckIfAddressIsValidRequest{
+        string address = 1;
+ }
+ 
+ message CheckIfAddressIsValidResponse {
+        string address = 1;
+        bool isValid = 2;
+ }
+ 

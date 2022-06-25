@@ -34,6 +34,7 @@ type KaspawalletdClient interface {
 	// Since SignRequest contains a password - this command should only be used on a trusted or secure connection
 	Sign(ctx context.Context, in *SignRequest, opts ...grpc.CallOption) (*SignResponse, error)
 	CheckIfAddressesAreValid(ctx context.Context, in *CheckIfAddressesAreValidRequest, opts ...grpc.CallOption) (*CheckIfAddressesAreValidResponse, error)
+	CheckIfAddressIsValid(ctx context.Context, in *CheckIfAddressIsValidRequest, opts ...grpc.CallOption) (*CheckIfAddressIsValidResponse, error)
 }
 
 type kaspawalletdClient struct {
@@ -134,6 +135,15 @@ func (c *kaspawalletdClient) CheckIfAddressesAreValid(ctx context.Context, in *C
 	return out, nil
 }
 
+func (c *kaspawalletdClient) CheckIfAddressIsValid(ctx context.Context, in *CheckIfAddressIsValidRequest, opts ...grpc.CallOption) (*CheckIfAddressIsValidResponse, error) {
+	out := new(CheckIfAddressIsValidResponse)
+	err := c.cc.Invoke(ctx, "/kaspawalletd.kaspawalletd/CheckIfAddressIsValid", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // KaspawalletdServer is the server API for Kaspawalletd service.
 // All implementations must embed UnimplementedKaspawalletdServer
 // for forward compatibility
@@ -150,6 +160,7 @@ type KaspawalletdServer interface {
 	// Since SignRequest contains a password - this command should only be used on a trusted or secure connection
 	Sign(context.Context, *SignRequest) (*SignResponse, error)
 	CheckIfAddressesAreValid(context.Context, *CheckIfAddressesAreValidRequest) (*CheckIfAddressesAreValidResponse, error)
+	CheckIfAddressIsValid(context.Context, *CheckIfAddressIsValidRequest) (*CheckIfAddressIsValidResponse, error)
 	mustEmbedUnimplementedKaspawalletdServer()
 }
 
@@ -186,6 +197,9 @@ func (UnimplementedKaspawalletdServer) Sign(context.Context, *SignRequest) (*Sig
 }
 func (UnimplementedKaspawalletdServer) CheckIfAddressesAreValid(context.Context, *CheckIfAddressesAreValidRequest) (*CheckIfAddressesAreValidResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CheckIfAddressesAreValid not implemented")
+}
+func (UnimplementedKaspawalletdServer) CheckIfAddressIsValid(context.Context, *CheckIfAddressIsValidRequest) (*CheckIfAddressIsValidResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckIfAddressIsValid not implemented")
 }
 func (UnimplementedKaspawalletdServer) mustEmbedUnimplementedKaspawalletdServer() {}
 
@@ -380,6 +394,24 @@ func _Kaspawalletd_CheckIfAddressesAreValid_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Kaspawalletd_CheckIfAddressIsValid_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckIfAddressIsValidRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(KaspawalletdServer).CheckIfAddressIsValid(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/kaspawalletd.kaspawalletd/CheckIfAddressIsValid",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(KaspawalletdServer).CheckIfAddressIsValid(ctx, req.(*CheckIfAddressIsValidRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Kaspawalletd_ServiceDesc is the grpc.ServiceDesc for Kaspawalletd service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -426,6 +458,10 @@ var Kaspawalletd_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CheckIfAddressesAreValid",
 			Handler:    _Kaspawalletd_CheckIfAddressesAreValid_Handler,
+		},
+		{
+			MethodName: "CheckIfAddressIsValid",
+			Handler:    _Kaspawalletd_CheckIfAddressIsValid_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

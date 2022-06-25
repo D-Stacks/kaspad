@@ -119,6 +119,25 @@ func (s *server) CheckIfAddressesAreValid(_ context.Context, request *pb.CheckIf
 	}, nil
 }
 
+func (s *server) CheckIfAddressisValid(_ context.Context, request *pb.CheckIfAddressIsValidRequest) (*pb.CheckIfAddressIsValidResponse, error) {
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	_, err := util.DecodeAddress(request.Address, s.params.Prefix)
+	if err != nil {
+		return &pb.CheckIfAddressIsValidResponse{
+			Address: request.Address,
+			IsValid: false,
+		}, nil
+	}
+
+	return &pb.CheckIfAddressIsValidResponse{
+		Address: request.Address,
+		IsValid: true,
+	}, nil
+}
+
 func (s *server) walletAddressString(wAddr *walletAddress) (string, error) {
 	path := s.walletAddressPath(wAddr)
 	addr, err := libkaspawallet.Address(s.params, s.keysFile.ExtendedPublicKeys, s.keysFile.MinimumSignatures, path, s.keysFile.ECDSA)
