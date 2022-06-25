@@ -119,7 +119,7 @@ func (s *server) CheckIfAddressesAreValid(_ context.Context, request *pb.CheckIf
 	}, nil
 }
 
-func (s *server) CheckIfAddressisValid(_ context.Context, request *pb.CheckIfAddressIsValidRequest) (*pb.CheckIfAddressIsValidResponse, error) {
+func (s *server) CheckIfAddressIsValid(_ context.Context, request *pb.CheckIfAddressIsValidRequest) (*pb.CheckIfAddressIsValidResponse, error) {
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
