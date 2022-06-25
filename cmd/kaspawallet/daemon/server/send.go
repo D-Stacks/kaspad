@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/kaspanet/kaspad/cmd/kaspawallet/daemon/pb"
 )
@@ -10,7 +11,12 @@ func (s *server) Send(_ context.Context, request *pb.SendRequest) (*pb.SendRespo
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	unsignedTransactions, err := s.createUnsignedTransactions(request.ToAddress, request.Amount, request.From)
+	amount, err :=  strconv.ParseUint(request.Amount, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	unsignedTransactions, err := s.createUnsignedTransactions(request.ToAddress, amount, request.From)
 	if err != nil {
 		return nil, err
 	}
