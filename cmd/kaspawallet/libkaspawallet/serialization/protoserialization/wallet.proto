@@ -33,6 +33,7 @@ message TransactionMessage{
   SubnetworkId subnetworkId = 5;
   uint64 gas = 6;
   bytes payload = 8;
+  uint64 fee = 9;
 }
 
 message TransactionInput{

@@ -114,6 +114,7 @@ message SendRequest{
 
 message SendResponse{
   repeated string txIDs = 1;
+  uint64 fees = 2; 
 }
 
 // Since SignRequest contains a password - this command should only be used on a trusted or secure connection
