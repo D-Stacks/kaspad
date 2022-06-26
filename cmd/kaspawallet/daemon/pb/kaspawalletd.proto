@@ -129,7 +129,6 @@ message SignResponse{
 message IsValidAddress {
         string address = 1;
         bool isValid = 2;
-        string error = 3;
 }
 
 message CheckIfAddressesAreValidRequest{
