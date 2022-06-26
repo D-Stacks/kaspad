@@ -102,7 +102,6 @@ func createUnsignedTransaction(
 
 	inputs := make([]*externalapi.DomainTransactionInput, len(selectedUTXOs))
 	partiallySignedInputs := make([]*serialization.PartiallySignedInput, len(selectedUTXOs))
-	var fee uint64 
 	for i, utxo := range selectedUTXOs {
 		emptyPubKeySignaturePairs := make([]*serialization.PubKeySignaturePair, len(extendedPublicKeys))
 		for i, extendedPublicKey := range extendedPublicKeys {
@@ -132,7 +131,6 @@ func createUnsignedTransaction(
 			DerivationPath:       utxo.DerivationPath,
 		}
 
-		fee += inputs[i].UTXOEntry.Amount()
 	}
 
 	outputs := make([]*externalapi.DomainTransactionOutput, len(payments))
@@ -146,7 +144,6 @@ func createUnsignedTransaction(
 			Value:           payment.Amount,
 			ScriptPublicKey: scriptPublicKey,
 		}
-		fee -= outputs[i].Value
 	}
 
 	domainTransaction := &externalapi.DomainTransaction{
@@ -157,7 +154,6 @@ func createUnsignedTransaction(
 		SubnetworkID: subnetworks.SubnetworkIDNative,
 		Gas:          0,
 		Payload:      nil,
-		Fee: 	      fee,	
 	}
 
 	return &serialization.PartiallySignedTransaction{

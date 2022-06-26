@@ -36,20 +36,26 @@ func (s *server) broadcast(transactions [][]byte, isDomain bool) ([]string, uint
 		if isDomain {
 			tx, err = serialization.DeserializeDomainTransaction(transaction)
 			if err != nil {
-				return nil, totalFees, err
+				return nil, 0, err
 			}
 		} else if !isDomain { //default in proto3 is false
 			tx, err = libkaspawallet.ExtractTransaction(transaction, s.keysFile.ECDSA)
 			if err != nil {
-				return nil, totalFees, err
+				return nil, 0, err
 			}
 		}
 
 		txIDs[i], err = sendTransaction(s.rpcClient, tx)
 		if err != nil {
-			return nil, totalFees, err
+			return nil, 0, err
 		}
-		totalFees += libkaspawallet.CalculateFee(tx)
+
+		fee, err := libkaspawallet.CalculateFee(tx)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		totalFees += fee
 
 		for _, input := range tx.Inputs {
 			s.usedOutpoints[input.PreviousOutpoint] = time.Now()
