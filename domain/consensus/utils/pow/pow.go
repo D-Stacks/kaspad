@@ -13,11 +13,11 @@ import (
 
 // State is an intermediate data structure with pre-computed values to speed up mining.
 type State struct {
-	mat        matrix
+	Mat        matrix
 	Timestamp  int64
 	Nonce      uint64
 	Target     big.Int
-	prePowHash externalapi.DomainHash
+	PrePowHash externalapi.DomainHash
 }
 
 // NewState creates a new state with pre-computed values to speed up mining
@@ -34,8 +34,8 @@ func NewState(header externalapi.MutableBlockHeader) *State {
 
 	return &State{
 		Target:     *target,
-		prePowHash: *prePowHash,
-		mat:        *generateMatrix(prePowHash),
+		PrePowHash: *prePowHash,
+		Mat:        *generateMatrix(prePowHash),
 		Timestamp:  timestamp,
 		Nonce:      nonce,
 	}
@@ -45,7 +45,7 @@ func NewState(header externalapi.MutableBlockHeader) *State {
 func (state *State) CalculateProofOfWorkValue() *big.Int {
 	// PRE_POW_HASH || TIME || 32 zero byte padding || NONCE
 	writer := hashes.NewPoWHashWriter()
-	writer.InfallibleWrite(state.prePowHash.ByteSlice())
+	writer.InfallibleWrite(state.PrePowHash.ByteSlice())
 	err := serialization.WriteElement(writer, state.Timestamp)
 	if err != nil {
 		panic(errors.Wrap(err, "this should never happen. Hash digest should never return an error"))
@@ -57,7 +57,7 @@ func (state *State) CalculateProofOfWorkValue() *big.Int {
 		panic(errors.Wrap(err, "this should never happen. Hash digest should never return an error"))
 	}
 	powHash := writer.Finalize()
-	heavyHash := state.mat.HeavyHash(powHash)
+	heavyHash := state.Mat.HeavyHash(powHash)
 	return toBig(heavyHash)
 }
 
