@@ -151,7 +151,6 @@ func (v *blockValidator) validateDifficulty(stagingArea *model.StagingArea,
 func (v *blockValidator) checkProofOfWork(header externalapi.BlockHeader) error {
 	// The target difficulty must be larger than zero.
 	state := pow.NewState(header.ToMutable())
-	log.Errorf("target: %s, Nonce: %d, PrePowHash: %s, HeavyHashHash: string", state.Target.String(), state.Nonce, state.PrePowHash.String())
 	target := &state.Target
 	if target.Sign() <= 0 {
 		return errors.Wrapf(ruleerrors.ErrNegativeTarget, "block target difficulty of %064x is too low",
@@ -168,7 +167,7 @@ func (v *blockValidator) checkProofOfWork(header externalapi.BlockHeader) error 
 	if !v.skipPoW {
 		valid := state.CheckProofOfWork()
 		if !valid {
-			return errors.Wrap(ruleerrors.ErrInvalidPoW, "block has invalid proof of work")
+			return errors.Wrapf(ruleerrors.ErrInvalidPoW, "block has invalid proof of work... target: %s, Nonce: %d, PrePowHash: %s", state.Target.String(), state.Nonce, state.PrePowHash.String())
 		}
 	}
 	return nil
