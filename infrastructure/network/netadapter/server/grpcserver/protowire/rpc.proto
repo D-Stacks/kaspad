@@ -167,6 +167,33 @@ message GetBlockTemplateResponseMessage{
   RPCError error = 1000;
 }
 
+message TemplateRequest {
+        string payAddress = 1;
+        string extraData = 2;
+}
+
+message TemplateReponse {
+        string address = 1;
+        RpcBlock block = 2;
+}
+
+
+message GetBlockTemplatesRequestMessage{
+        // Which kaspa address should the coinbase block reward transaction pay into
+        repeated TemplateRequest templateRequests = 1;
+      }
+
+message GetBlockTemplatesResponseMessage{
+        // Which kaspa address should the coinbase block reward transaction pay into
+        repeated TemplateReponse templateResponses= 1;
+        bool isSynced = 2;
+
+        RPCError error = 1000;
+      }
+      
+
+
+
 // NotifyBlockAddedRequestMessage registers this connection for blockAdded notifications.
 //
 // See: BlockAddedNotificationMessage
